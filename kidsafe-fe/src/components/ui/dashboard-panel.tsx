@@ -1,149 +1,167 @@
-import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
-import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
+import React, { useState, useEffect } from 'react';
+import { formatMinutes } from "@/lib/utils";
+import { toast } from "sonner";
+import { authService } from "@/services/authService";
 
 interface DashboardPanelProps {
-  childName?: string;
-  usageData?: {
+  childName: string;
+  usageData: {
     totalTimeToday: number;
     remainingTime: number;
     dailyLimit: number;
   };
-  recentActivities?: Array<{
-    id: string;
-    name: string;
-    timestamp: string;
-    duration: number;
-  }>;
+  recentActivities: any[];
+  childId: number;  // Add childId as a required prop
 }
 
-const formatMinutes = (minutes: number) => {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  return `${hours > 0 ? `${hours}h ` : ''}${mins}m`;
-};
-
 export function DashboardPanel({
-  childName = "Child",
-  usageData = { totalTimeToday: 60, remainingTime: 120, dailyLimit: 180 },
-  recentActivities = []
+  childName,
+  usageData,
+  recentActivities = [],
+  childId
 }: DashboardPanelProps) {
+  const [isOnline, setIsOnline] = useState(false);
+  // We'll track the displayed remaining time separately from the prop
+  const [displayedRemainingTime, setDisplayedRemainingTime] = useState(usageData.remainingTime);
+  const [displayedTotalTime, setDisplayedTotalTime] = useState(usageData.totalTimeToday);
   
-  const percentUsed = Math.min(100, Math.round(((usageData.dailyLimit - usageData.remainingTime) / usageData.dailyLimit) * 100));
+  // Check if the child is online
+  useEffect(() => {
+    // Initial check
+    setIsOnline(authService.isChildOnline(childId));
+    
+    // Set interval to check periodically
+    const intervalId = setInterval(() => {
+      setIsOnline(authService.isChildOnline(childId));
+    }, 30000); // Check every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [childId]);
+  
+  // Reset displayed time when props change
+  useEffect(() => {
+    setDisplayedRemainingTime(usageData.remainingTime);
+    setDisplayedTotalTime(usageData.totalTimeToday);
+  }, [usageData.remainingTime, usageData.totalTimeToday]);
+  
+  // Timer effect to simulate time passing
+  useEffect(() => {
+    // Update time every minute
+    const timer = setInterval(() => {
+      setDisplayedRemainingTime(prev => {
+        // Don't go below zero
+        const newValue = Math.max(0, prev - 1);
+        // If we've reached zero, show an alert
+        if (prev > 0 && newValue === 0) {
+          toast.warning(`${childName} has reached their screen time limit!`);
+        }
+        return newValue;
+      });
+      
+      setDisplayedTotalTime(prev => prev + 1);
+    }, 60000); // Update every 1 minute (60000ms)
+    
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [childName]);
+  
+  // Calculate percentage of time used based on displayed values
+  const percentageUsed = Math.min(100, Math.round((displayedTotalTime / usageData.dailyLimit) * 100));
+  
+  // Calculate hours and minutes for display - formatted exactly as in mockup
+  const hoursUsed = Math.floor(displayedTotalTime / 60);
+  const minutesUsed = displayedTotalTime % 60;
+  const hoursTotal = Math.floor(usageData.dailyLimit / 60);
+  const minutesTotal = usageData.dailyLimit % 60;
+  
+  // Format the time correctly to match the mockup: "2h 0m / 2h 0m"
+  const formattedTime = `${hoursUsed}h ${minutesUsed}m / ${hoursTotal}h ${minutesTotal}m`;
   
   return (
-    <div className="w-full max-w-sm md:max-w-md bg-background border rounded-lg shadow-md overflow-hidden">
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center">
-          <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-          <div className="w-3 h-3 rounded-full bg-yellow-500 mx-2"></div>
-          <div className="w-3 h-3 rounded-full bg-green-500 ml-2"></div>
+    <div className="bg-white rounded-xl shadow-md overflow-hidden border border-border">
+      {/* Header with child info */}
+      <div className="p-4 pb-2">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center font-medium">
+            {childName.substring(0, 1).toUpperCase()}
+          </div>
+          <div>
+            <h3 className="font-medium text-lg">{childName}</h3>
+            <div className="flex items-center text-xs text-gray-500">
+              <div className={`w-2 h-2 rounded-full mr-1.5 ${isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+              <span>{isOnline ? 'Online now' : 'Offline'}</span>
+            </div>
+          </div>
         </div>
-        <div className="text-sm font-medium">KidSafe Dashboard</div>
       </div>
       
-      <div className="p-4">
-        <div className="flex items-center mb-4">
-          <Avatar className="h-10 w-10 mr-3">
-            <AvatarImage src="/avatars/boy1.png" alt={childName} />
-            <AvatarFallback>{childName.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h3 className="font-medium">{childName}</h3>
-            <p className="text-xs text-muted-foreground">Online now</p>
-          </div>
-          <div className="ml-auto flex items-center">
-            <span className="inline-flex h-2 w-2 rounded-full bg-green-500 mr-1.5 animate-pulse"></span>
-            <span className="text-xs text-muted-foreground">Active</span>
-          </div>
+      {/* Screen time progress bar */}
+      <div className="px-4 py-3">
+        <h4 className="text-sm font-medium mb-1">Screen Time Today</h4>
+        <div className="text-sm mb-2">{formattedTime}</div>
+        <div className="w-full bg-gray-100 rounded-full h-2 mb-1">
+          <div 
+            className={`h-2 rounded-full ${
+              percentageUsed > 90 ? 'bg-red-500' : 
+              percentageUsed > 75 ? 'bg-yellow-500' : 
+              'bg-blue-500'
+            }`}
+            style={{ 
+              width: `${percentageUsed}%`,
+              transition: 'width 0.5s ease, background-color 0.3s ease' 
+            }}
+          ></div>
         </div>
-        
-        <div className="space-y-1 mb-4">
-          <div className="flex justify-between text-sm">
-            <span>Screen Time Today</span>
-            <span>{formatMinutes(usageData.dailyLimit - usageData.remainingTime)} / {formatMinutes(usageData.dailyLimit)}</span>
-          </div>
-          <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${
-                percentUsed > 90 ? 'bg-red-500' : 
-                percentUsed > 75 ? 'bg-yellow-500' : 
-                'bg-blue-500'
-              } ${percentUsed < 100 ? 'animate-pulse' : ''}`}
-              style={{ width: `${percentUsed}%` }}
-            />
-          </div>
-          <p className="text-xs mt-1 text-muted-foreground text-right">
-            {formatMinutes(usageData.remainingTime)} remaining
-          </p>
+        <div className="text-xs text-right">
+          <span>{formatMinutes(displayedRemainingTime)} remaining</span>
         </div>
-        
-        <div className="space-y-2 mb-4">
-          <h4 className="text-sm font-medium">Recent Activity</h4>
-          <div className="space-y-2">
-            {recentActivities.length > 0 ? (
-              recentActivities.map((activity) => (
-                <div key={activity.id} className="rounded-md p-2 bg-muted/50 hover:bg-muted/80 transition-colors">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">{activity.name}</span>
-                    <span className="text-xs">{formatMinutes(activity.duration)}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">{formatTimeAgo(activity.timestamp)}</p>
+      </div>
+      
+      {/* Recent activity */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <h4 className="text-sm font-medium mb-2">Recent Activity</h4>
+        <div className="space-y-3">
+          {recentActivities && recentActivities.length > 0 ? (
+            recentActivities.map((activity, i) => (
+              <div key={i} className="flex justify-between items-center">
+                <div>
+                  <div className="font-medium text-sm">{activity.name}</div>
+                  <div className="text-xs text-gray-500">Just now</div>
                 </div>
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground">No recent activity</p>
-            )}
-          </div>
+                <div className="text-xs bg-gray-100 px-2 py-1 rounded-full">
+                  {formatMinutes(activity.duration)}
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-center text-sm text-gray-500 py-2">
+              No recent activity
+            </div>
+          )}
         </div>
-        
-        <div className="rounded-md border p-3 mt-2">
-          <div className="flex justify-between items-center mb-2">
-            <h4 className="text-sm font-medium">Live Alerts</h4>
-            <span className="flex h-2 w-2 rounded-full bg-green-500 animate-ping"></span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            {recentActivities.length > 0 ? (
-              <>
-                <p className="mb-1">• {childName} just opened {recentActivities[0].name} ({formatTimeAgo(recentActivities[0].timestamp)})</p>
-                <p>• Screen time limit approaching ({formatMinutes(usageData.remainingTime)} left)</p>
-              </>
-            ) : (
-              <p>No recent alerts</p>
-            )}
-          </div>
-        </div>
-        
-        <div className="mt-4 pt-4 border-t border-dashed">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-medium">Quick Actions</h4>
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <button className="bg-muted/70 hover:bg-muted text-xs py-2 px-3 rounded flex items-center justify-center transition-colors">
-              <span>Pause Screen Time</span>
-            </button>
-            <button className="bg-muted/70 hover:bg-muted text-xs py-2 px-3 rounded flex items-center justify-center transition-colors">
-              <span>Add Time (15m)</span>
-            </button>
-          </div>
+      </div>
+      
+      {/* Live alerts */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        <h4 className="text-sm font-medium mb-2">Live Alerts</h4>
+        <div className="space-y-2">
+          {isOnline ? (
+            <>
+              <div className="rounded-md bg-gray-50 p-2 text-xs">
+                • {childName} just opened Candy Crush (Just now)
+              </div>
+              <div className="rounded-md bg-gray-50 p-2 text-xs">
+                • Screen time limit approaching ({formatMinutes(displayedRemainingTime)} left)
+              </div>
+            </>
+          ) : (
+            <div className="text-center text-sm text-gray-500 py-2">
+              No alerts while child is offline
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
-}
-
-function formatTimeAgo(timestamp: string) {
-  const date = new Date(timestamp);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins}m ago`;
-  
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
 } 

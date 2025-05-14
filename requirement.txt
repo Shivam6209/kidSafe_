@@ -1,0 +1,69 @@
+KidSafe – Parental Control & Usage Monitor
+Scenario
+Parents need visibility and control over their children’s screen time and app usage on family devices.
+
+🎯 Objective
+Create a dashboard where parents register child profiles, set daily time limits and website blacklists, view usage logs, and receive alerts when limits are reached.
+
+👤 User Role: parent (and implicitly child)
+Parents manage settings and view logs
+Children must authenticate but see only limited UI (time left)
+🔐 Auth & Authorization
+Parent signup/login with OTP/email verification
+Child profiles under parent’s account
+Parent-only access to settings and reports
+🧱 Core Modules
+Child Profile Setup
+Add children with name, device ID, and avatar
+Time & Content Rules
+Daily screen-time limit per child
+Blocklist of websites or app categories
+Usage Monitoring
+Track websites visited and time spent
+Log app launches and duration
+Alerts & Locks
+Notify child/parent when limit is reached
+Temporarily lock device access (mocked UI blocking)
+Usage Reports
+Timeline view of daily activity
+Week-over-week comparison charts
+
+Ai features nice to have:-
+1. Smart Usage Insights (AI-Driven Reports)
+Why it's the best:
+High parental value — gives actionable patterns, not just raw data.
+
+Makes your app stand out: “not just control, but intelligence.”
+
+Example Output:
+“Your child exceeds their screen-time limit most often on Fridays after 7 PM. Consider adjusting limits or schedule.”
+
+2. Content Classification with AI:
+Saves parents tons of manual effort in building blacklist rules.
+
+Makes reports and filters more useful: “Social Media – 2h”, “Games – 1.5h”
+
+Before proceeding with any changes, please ensure the following steps are followed:
+
+1. *Revert any previously incorrect implementations* to maintain codebase integrity.
+
+2. *Standardize Data Fetching via Services*:
+   - For example, in the Dashboard module, use the dashboardService to fetch data.
+   - Define a function like:
+
+     javascript
+     getDashboardData(someParam) {
+       // Call the backend API (to be implemented later) call the relevent API and comment that later it will get uncommented when API will be implemented
+       // For now, return some dummy/mock data
+     }
+     
+
+   - Always call this function from the component (e.g., Dashboard component) to retrieve data.
+
+3. *Maintain Consistency Across Modules*:
+   - Apply this approach uniformly across all modules in the project.
+   - This ensures better separation of concerns, easier testing, and maintainable code.
+
+✅ This pattern promotes a clean architecture and facilitates scalability.
+
+🔁 Consistency is key. Ensure every module adheres to this structure.

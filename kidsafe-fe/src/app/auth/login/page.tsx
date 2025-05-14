@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { authService } from "@/services/authService";
+import { safeNavigate } from "@/lib/navigation";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,21 +26,25 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
     
+    if (!formData.email || !formData.password) {
+      setError("Please enter both email and password");
+      return;
+    }
+    
+    setLoading(true);
+    
     try {
-      // For demo, use any email that looks valid with any password
-      if (formData.email.includes('@')) {
-        const user = await authService.login(formData.email, formData.password);
-        if (user) {
-          router.push("/dashboard");
-        }
-      } else {
-        throw new Error("Invalid email format");
+      const user = await authService.login(formData.email, formData.password);
+      
+      if (user) {
+        toast.success("Login successful!");
+        safeNavigate(router, "/dashboard", { delay: 300 });
       }
     } catch (err) {
-      setError("Invalid email or password. Please try again.");
+      console.error("Login error:", err);
+      setError("Invalid email or password");
     } finally {
       setLoading(false);
     }

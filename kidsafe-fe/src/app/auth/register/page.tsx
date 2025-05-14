@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { authService } from "@/services/authService";
+import { safeNavigate } from "@/lib/navigation";
+import { toast } from "sonner";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,10 +21,20 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [step, setStep] = useState(1);
+  
+  // Add state for OTP verification
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Reset email verification if email changes
+    if (name === 'email') {
+      setEmailVerified(false);
+    }
   };
 
   const validateStep1 = () => {
@@ -32,6 +44,10 @@ export default function RegisterPage() {
     }
     if (!formData.email.includes('@')) {
       setError("Please enter a valid email address");
+      return false;
+    }
+    if (!emailVerified) {
+      setError("Please verify your email address before continuing");
       return false;
     }
     return true;
@@ -55,6 +71,44 @@ export default function RegisterPage() {
       setStep(2);
     }
   };
+  
+  const handleSendOtp = async () => {
+    if (!formData.email || !formData.email.includes('@')) {
+      setError("Please enter a valid email address");
+      return;
+    }
+    
+    try {
+      setSendingOtp(true);
+      const result = await authService.sendOtp(formData.email);
+      toast.success(result.message || "Verification code sent to your email");
+    } catch (error) {
+      console.error("Error sending OTP:", error);
+      setError(error instanceof Error ? error.message : "Failed to send verification code");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+  
+  const handleVerifyOtp = async () => {
+    if (!formData.email || !otpCode) {
+      setError("Please enter the verification code");
+      return;
+    }
+    
+    try {
+      setVerifyingOtp(true);
+      const result = await authService.verifyOtp(formData.email, otpCode);
+      toast.success(result.message || "Email verified successfully!");
+      setEmailVerified(true);
+      setOtpCode("");
+    } catch (error) {
+      console.error("Error verifying OTP:", error);
+      setError(error instanceof Error ? error.message : "Failed to verify code");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,7 +128,8 @@ export default function RegisterPage() {
       );
       
       if (user) {
-        router.push("/dashboard");
+        toast.success("Registration successful!");
+        safeNavigate(router, "/dashboard", { delay: 500 });
       }
     } catch (err) {
       setError("Registration failed. Please try again.");
@@ -175,7 +230,61 @@ export default function RegisterPage() {
                     className="h-10"
                   />
                 </div>
-                <Button type="button" className="w-full" onClick={handleNextStep}>
+                
+                {/* Email Verification Section */}
+                <div className="p-3 border rounded-md space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-medium">Verify Your Email</h4>
+                    {emailVerified && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  
+                  {!emailVerified ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">
+                        We'll send a verification code to your email
+                      </p>
+                      <div className="flex gap-2">
+                        <Input
+                          value={otpCode}
+                          onChange={(e) => setOtpCode(e.target.value)}
+                          placeholder="6-digit code"
+                          maxLength={6}
+                          disabled={!formData.email}
+                        />
+                        <Button 
+                          onClick={handleVerifyOtp}
+                          disabled={verifyingOtp || otpCode.length !== 6}
+                          size="sm"
+                        >
+                          {verifyingOtp ? "Verifying..." : "Verify"}
+                        </Button>
+                      </div>
+                      <Button 
+                        variant="outline" 
+                        className="text-xs w-full"
+                        onClick={handleSendOtp}
+                        disabled={sendingOtp || !formData.email}
+                      >
+                        {sendingOtp ? "Sending..." : "Send Verification Code"}
+                      </Button>
+                    </>
+                  ) : (
+                    <p className="text-xs text-green-600">
+                      Your email has been successfully verified.
+                    </p>
+                  )}
+                </div>
+                
+                <Button 
+                  type="button" 
+                  className="w-full" 
+                  onClick={handleNextStep}
+                  disabled={!emailVerified}
+                >
                   Continue
                 </Button>
               </div>

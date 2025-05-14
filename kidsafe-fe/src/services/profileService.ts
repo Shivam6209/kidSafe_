@@ -17,7 +17,25 @@ export const avatarOptions = [
 export const profileService = {
   // Get a list of all children for a parent
   getChildren: async (): Promise<Child[]> => {
-    return authService.getChildren();
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Authentication required');
+      
+      const response = await fetch(`${API_URL}/profile/children`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch children');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      return [];
+    }
   },
   
   // Get a single child by ID
@@ -76,6 +94,8 @@ export const profileService = {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Authentication required');
       
+      console.log("ProfileService updateChild - Request data:", updates);
+      
       const response = await fetch(`${API_URL}/profile/children/${childId}`, {
         method: 'PATCH',
         headers: {
@@ -87,10 +107,13 @@ export const profileService = {
       
       if (!response.ok) {
         const errorData = await response.json();
+        console.error("ProfileService updateChild - Error response:", errorData);
         throw new Error(errorData.message || 'Failed to update child profile');
       }
       
-      return await response.json();
+      const responseData = await response.json();
+      console.log("ProfileService updateChild - Success response:", responseData);
+      return responseData;
     } catch (error) {
       console.error('Error updating child:', error);
       throw error;
