@@ -1,0 +1,9 @@
+{
+  "buildCommand": "next build --no-lint",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ]
+} 
