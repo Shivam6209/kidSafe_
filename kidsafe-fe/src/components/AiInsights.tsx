@@ -204,10 +204,10 @@ export function AiInsightsComponent({ childId, childName }: AiInsightsComponentP
         </Tabs>
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
-        <p className="text-xs text-muted-foreground">
+        <div className="text-xs text-muted-foreground flex items-center">
           <Badge variant="outline" className="mr-1">AI</Badge>
           Insights generated based on recent activity data
-        </p>
+        </div>
         <Button onClick={fetchInsights} size="sm" variant="ghost">
           Refresh
         </Button>
