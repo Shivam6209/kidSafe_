@@ -107,10 +107,11 @@ export function AiInsightsComponent({ childId, childName }: AiInsightsComponentP
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="summary" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-4">
+          <TabsList className="grid grid-cols-4 mb-4">
             <TabsTrigger value="summary">Summary</TabsTrigger>
             <TabsTrigger value="patterns">Patterns</TabsTrigger>
             <TabsTrigger value="recommendations">Recommendations</TabsTrigger>
+            <TabsTrigger value="data">Original Data</TabsTrigger>
           </TabsList>
           
           <TabsContent value="summary" className="space-y-4">
@@ -200,6 +201,100 @@ export function AiInsightsComponent({ childId, childName }: AiInsightsComponentP
                 ))}
               </div>
             </div>
+          </TabsContent>
+          
+          <TabsContent value="data" className="space-y-4">
+            {insights.originalData ? (
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                    <Activity className="h-4 w-4 text-primary" />
+                    Category Distribution
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="text-left p-2 border">Category</th>
+                          <th className="text-left p-2 border">Duration (mins)</th>
+                          <th className="text-left p-2 border">Percentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {insights.originalData.categoryBreakdown.map((category, i) => (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                            <td className="p-2 border capitalize">{category.category}</td>
+                            <td className="p-2 border">{category.duration}</td>
+                            <td className="p-2 border">{category.percentage}%</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                    <BarChart className="h-4 w-4 text-primary" />
+                    Time Distribution
+                  </h4>
+                  <div className="grid grid-cols-4 gap-2">
+                    {Object.entries(insights.originalData.timeDistribution).map(([time, duration]) => (
+                      <div key={time} className="bg-muted/30 p-3 rounded-lg">
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">{time}</p>
+                        <p className="text-sm font-medium">{duration} mins</p>
+                        <div className="h-2 bg-muted mt-2 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary" 
+                            style={{ 
+                              width: `${Math.min(100, (duration as number) / insights.originalData.totalTime * 100)}%` 
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    Recent Activities
+                  </h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="bg-muted">
+                          <th className="text-left p-2 border">Activity</th>
+                          <th className="text-left p-2 border">Category</th>
+                          <th className="text-left p-2 border">Duration</th>
+                          <th className="text-left p-2 border">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {insights.originalData.activityData.slice(0, 10).map((activity, i) => (
+                          <tr key={i} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                            <td className="p-2 border">{activity.name}</td>
+                            <td className="p-2 border capitalize">{activity.category || 'other'}</td>
+                            <td className="p-2 border">{activity.duration} mins</td>
+                            <td className="p-2 border">
+                              {new Date(activity.timestamp).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center py-6 space-y-4">
+                <AlertCircle className="h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">
+                  No original activity data available.
+                </p>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </CardContent>

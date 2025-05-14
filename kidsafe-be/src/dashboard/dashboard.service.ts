@@ -414,7 +414,6 @@ export class DashboardService {
 
   /**
    * Generate AI insights based on child activity data
-   * For now, returns static insights
    */
   async getAiInsights(childId: string, userId: number, isChildToken: boolean = false): Promise<any> {
     // First verify child belongs to the user (unless it's a child token)
@@ -436,7 +435,63 @@ export class DashboardService {
       throw new NotFoundException(`Child with ID ${childId} not found`);
     }
 
-    // Return static mock insights
+    // Get all activities for this child
+    const activities = await this.activityRepository.find({
+      where: { child: { id: +childId } },
+      order: { timestamp: 'DESC' },
+    });
+
+    // Prepare activity data for analysis
+    const activityData = activities.map(activity => ({
+      name: activity.name,
+      category: activity.category,
+      duration: activity.duration,
+      timestamp: activity.timestamp,
+    }));
+
+    // Calculate total time spent
+    const totalTime = activities.reduce((sum, activity) => sum + activity.duration, 0);
+    
+    // Calculate category breakdown
+    const categoryUsage = new Map();
+    for (const activity of activities) {
+      const category = activity.category || 'other';
+      if (!categoryUsage.has(category)) {
+        categoryUsage.set(category, 0);
+      }
+      categoryUsage.set(category, categoryUsage.get(category) + activity.duration);
+    }
+
+    const categoryBreakdown = Array.from(categoryUsage.entries())
+      .map(([category, duration]) => ({
+        category,
+        duration,
+        percentage: totalTime > 0 ? Math.round((duration / totalTime) * 100) : 0,
+      }))
+      .sort((a, b) => b.duration - a.duration);
+
+    // Get activity times distribution
+    const timeDistribution = {
+      morning: 0,    // 5am - 12pm
+      afternoon: 0,  // 12pm - 5pm
+      evening: 0,    // 5pm - 9pm
+      night: 0       // 9pm - 5am
+    };
+
+    activities.forEach(activity => {
+      const hour = new Date(activity.timestamp).getHours();
+      if (hour >= 5 && hour < 12) {
+        timeDistribution.morning += activity.duration;
+      } else if (hour >= 12 && hour < 17) {
+        timeDistribution.afternoon += activity.duration;
+      } else if (hour >= 17 && hour < 21) {
+        timeDistribution.evening += activity.duration;
+      } else {
+        timeDistribution.night += activity.duration;
+      }
+    });
+
+    // Return insights with the original data
     return {
       summary: `${child.name} typically uses devices for educational content and entertainment, with moderate screen time during weekdays and increased usage on weekends.`,
       patterns: [
@@ -459,7 +514,14 @@ export class DashboardService {
         "Review entertainment content categories periodically"
       ],
       screenTimeAnalysis: "Overall screen time is within reasonable limits but could benefit from more scheduled breaks.",
-      contentCategoriesAnalysis: "Good distribution of educational and entertainment content, with minimal exposure to concerning categories."
+      contentCategoriesAnalysis: "Good distribution of educational and entertainment content, with minimal exposure to concerning categories.",
+      // Include the original activity data for the frontend to display
+      originalData: {
+        activityData,
+        categoryBreakdown,
+        timeDistribution,
+        totalTime
+      }
     };
   }
 } 

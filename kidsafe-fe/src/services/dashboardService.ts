@@ -41,6 +41,26 @@ export interface AiInsights {
   recommendations: string[];
   screenTimeAnalysis: string;
   contentCategoriesAnalysis: string;
+  originalData?: {
+    activityData: {
+      name: string;
+      category?: string;
+      duration: number;
+      timestamp: string | Date;
+    }[];
+    categoryBreakdown: {
+      category: string;
+      duration: number;
+      percentage: number;
+    }[];
+    timeDistribution: {
+      morning: number;
+      afternoon: number;
+      evening: number;
+      night: number;
+    };
+    totalTime: number;
+  };
 }
 
 // API Base URL
